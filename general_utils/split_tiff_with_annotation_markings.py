@@ -4,7 +4,7 @@ import pandas as pd
 import os
 
 
-def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=4096):
+def split_and_mark_chunks(tiff_path, csv_path, output_path, chunk_size, level=2, jpeg_quality=95):
     # Create output folder
     os.makedirs(output_path, exist_ok=True)
 
@@ -27,7 +27,7 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=
                 points_in_chunk = df[
                     (df['x'] >= x) & (df['x'] < x + chunk_size) &
                     (df['y'] >= y) & (df['y'] < y + chunk_size)
-                    ].copy()
+                ].copy()
 
                 # Skip if no points
                 if len(points_in_chunk) == 0:
@@ -54,8 +54,8 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=
                     px, py = point['x_local'], point['y_local']
                     draw.ellipse([px - 5, py - 5, px + 5, py + 5], fill='red', outline='yellow')
 
-                # Save image and CSV
-                img.save(f'{chunk_folder}/{chunk_name}.png')
+                # Save image as JPEG with compression and CSV
+                img.save(f'{chunk_folder}/{chunk_name}.jpg', 'JPEG', quality=jpeg_quality)
                 points_in_chunk.to_csv(f'{chunk_folder}/{chunk_name}.csv', index=False)
 
                 print(f"Saved chunk {chunk_num} with {len(points_in_chunk)} points")
@@ -64,13 +64,16 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=
 
 def main():
     tiff_path = r"C:\Users\User\Desktop\data\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
-    output_folder = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096"
     csv_path = r"C:\Users\User\Desktop\data\sample 2\2025-09-29_full_detections.csv"
+    chunk_size = 100000
+    output_folder = fr"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_{chunk_size}"
 
     split_and_mark_chunks(
         tiff_path=tiff_path,
         csv_path=csv_path,
-        output_path=output_folder
+        output_path=output_folder,
+        chunk_size=chunk_size,
+        jpeg_quality=95  # Optional: adjust quality (1-100, default 95)
     )
 
 
