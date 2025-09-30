@@ -43,15 +43,15 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, chunk_size, level=2,
                 chunk = image[y:y + chunk_size, x:x + chunk_size].copy()
 
                 # Add local coordinates
-                points_in_chunk['x_local'] = points_in_chunk['x'] - x
-                points_in_chunk['y_local'] = points_in_chunk['y'] - y
+                points_in_chunk['x'] = points_in_chunk['x'] - x
+                points_in_chunk['y'] = points_in_chunk['y'] - y
 
                 # Draw points on chunk
                 img = Image.fromarray(chunk)
                 draw = ImageDraw.Draw(img)
 
                 for _, point in points_in_chunk.iterrows():
-                    px, py = point['x_local'], point['y_local']
+                    px, py = point['x'], point['y']
                     draw.ellipse([px - 5, py - 5, px + 5, py + 5], fill='red', outline='yellow')
 
                 # Save image as JPEG with compression and CSV
@@ -65,7 +65,7 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, chunk_size, level=2,
 def main():
     tiff_path = r"C:\Users\User\Desktop\data\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
     csv_path = r"C:\Users\User\Desktop\data\sample 2\2025-09-29_full_detections.csv"
-    chunk_size = 100000
+    chunk_size = 4096
     output_folder = fr"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_{chunk_size}"
 
     split_and_mark_chunks(

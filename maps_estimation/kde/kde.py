@@ -7,7 +7,7 @@ from osgeo import gdal
 import tifffile
 import tempfile
 import os
-
+from tqdm import tqdm
 Image.MAX_IMAGE_PIXELS = None
 
 
@@ -24,7 +24,9 @@ def estimate_kde(csv_path, output_base, bandwidth, reference_image_path):
 
     # Load points
     df = pd.read_csv(csv_path)
-    x, y = df['x_local'].values, df['y_local'].values
+    df = pd.read_csv(csv_path)
+    df = df[df['category'] == 'Category 2']
+    x, y = df['x'].values, df['y'].values
 
     # Create KDE
     kde = gaussian_kde(np.vstack([x, y]), bw_method=bandwidth)
@@ -91,11 +93,17 @@ def estimate_kde(csv_path, output_base, bandwidth, reference_image_path):
 
 
 def main():
-    csv_path = r"C:\Users\User\Desktop\data\sample 2\jpeg version\2025-09-29_full_detections_fitlered.csv"
-    ref_image = r"C:\Users\User\Desktop\data\sample 2\jpeg version\sample_2.jpg"
+    csv_path = r"C:\Users\User\Desktop\data\sample 2\2025-09-29_full_detections.csv"
+    ref_image = r"C:\Users\User\Desktop\data\sample 2\level_2_with_overviews.tif"
 
-    for bw in [0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
-        output = fr'C:\Users\User\Desktop\data\sample 2\jpeg version\kde\kde_bw_{bw}'
+    # base_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096\chunk_61_y20480_x24576"
+    # csv_path = os.path.join(base_path, 'chunk_61_y20480_x24576.csv')
+    # ref_image = os.path.join(base_path, 'chunk_61_y20480_x24576.jpg')
+
+
+    for bw in tqdm([0.001, 0.01, 0.05, 0.1, 0.2, 0.3]):
+        output = fr'C:\Users\User\Desktop\data\sample 2\kde\kde_bw_{bw}'
+        # output = os.path.join(base_path, f'kde\kde_bw_{bw}')
         results = estimate_kde(csv_path, output, bw, ref_image)
         print(f"BW {bw}: Entropy={results['entropy']:.4f}, Gini={results['gini']:.4f}\n")
 
