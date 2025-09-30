@@ -251,17 +251,26 @@ class ClusterPointGenerator:
             messagebox.showwarning("No Points", "Please generate or add points first.")
             return
 
-        # Ask for output directory
-        output_dir = filedialog.askdirectory(title="Select Output Directory")
-        if not output_dir:
+        # Ask for output file name (without extension)
+        file_path = filedialog.asksaveasfilename(
+            title="Save files as",
+            defaultextension="",
+            filetypes=[("All files", "*.*")]
+        )
+
+        if not file_path:
             return
 
+        # Remove extension if user added one
+        import os
+        base_path = os.path.splitext(file_path)[0]
+
         # Export PNG
-        png_path = f"{output_dir}/red_points.png"
+        png_path = f"{base_path}.png"
         Image.fromarray(self.img_array).save(png_path)
 
         # Export CSV
-        csv_path = f"{output_dir}/red_points.csv"
+        csv_path = f"{base_path}.csv"
         df = pd.DataFrame([{'x_local': p['x'], 'y_local': p['y']} for p in self.points])
         df.to_csv(csv_path, index=False)
 
