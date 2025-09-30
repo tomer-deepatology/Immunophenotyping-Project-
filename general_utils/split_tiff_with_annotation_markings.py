@@ -4,7 +4,7 @@ import pandas as pd
 import os
 
 
-def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=2048):
+def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=4096):
     # Create output folder
     os.makedirs(output_path, exist_ok=True)
 
@@ -64,7 +64,7 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, level=2, chunk_size=
 
 def main():
     tiff_path = r"C:\Users\User\Desktop\data\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
-    output_folder = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations"
+    output_folder = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096"
     csv_path = r"C:\Users\User\Desktop\data\sample 2\2025-09-29_full_detections.csv"
 
     split_and_mark_chunks(
