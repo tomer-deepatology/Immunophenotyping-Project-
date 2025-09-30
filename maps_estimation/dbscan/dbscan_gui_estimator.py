@@ -5,8 +5,13 @@ from PIL import Image, ImageDraw, ImageTk
 import tkinter as tk
 
 # Load data and image
-csv_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations\chunk_183_y16384_x14336\chunk_183_y16384_x14336.csv"
-img_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations\chunk_183_y16384_x14336\chunk_183_y16384_x14336.png"
+# csv_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations\chunk_183_y16384_x14336\chunk_183_y16384_x14336.csv"
+# img_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations\chunk_183_y16384_x14336\chunk_183_y16384_x14336.png"
+
+
+csv_path = r"C:\Users\User\Desktop\data\synthetic samples\red_points.csv"
+img_path = r"C:\Users\User\Desktop\data\synthetic samples\red_points.png"
+
 
 df = pd.read_csv(csv_path)
 base_img = Image.open(img_path).convert('RGBA').resize((700, 700))  # Smaller image
