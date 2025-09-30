@@ -35,8 +35,8 @@ def estimate_kde_from_chunk(chunk_csv_path, output_path_base, bandwidth, referen
 
     # Create grid for evaluation - USE REFERENCE IMAGE DIMENSIONS
     xx, yy = np.meshgrid(
-        np.linspace(0, ref_width, ref_width),  # From 0 to image width
-        np.linspace(0, ref_height, ref_height)  # From 0 to image height
+        np.linspace(0, ref_width, 2000),  # From 0 to image width
+        np.linspace(0, ref_height, 2000)  # From 0 to image height
     )
 
     # Evaluate KDE on grid
@@ -68,7 +68,11 @@ def estimate_kde_from_chunk(chunk_csv_path, output_path_base, bandwidth, referen
     density_colored = hot_colormap(density_normalized)
     # Convert to RGB (0-255)
     density_rgb = (density_colored[:, :, :3] * 255).astype(np.uint8)
-    Image.fromarray(density_rgb).save(heatmap_path, 'JPEG', quality=95)
+
+    density_rgb = Image.fromarray(density_rgb).resize((ref_width, ref_height), Image.BILINEAR)
+
+    density_rgb.save(heatmap_path, 'JPEG', quality=95)
+
     print(f"Saved heatmap: {ref_width}x{ref_height} - {heatmap_path}")
 
     # Plot with original point coordinates
