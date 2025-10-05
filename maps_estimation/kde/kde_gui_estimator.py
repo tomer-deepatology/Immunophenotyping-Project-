@@ -6,18 +6,19 @@ import tkinter as tk
 import matplotlib.cm as cm
 
 
-# csv_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096\chunk_47_y16384_x12288\chunk_47_y16384_x12288.csv"
-# img_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096\chunk_47_y16384_x12288\chunk_47_y16384_x12288.png"
+# csv_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096\chunk_60_y20480_x20480\chunk_60_y20480_x20480.csv"
+# img_path = r"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_4096\chunk_60_y20480_x20480\chunk_60_y20480_x20480.jpg"
 
-csv_path = r"C:\Users\User\Desktop\data\synthetic samples\red_points.csv"
-img_path = r"C:\Users\User\Desktop\data\synthetic samples\red_points.png"
+csv_path = r"C:\Users\User\Desktop\data\synthetic samples\syn_points_1.csv"
+img_path = r"C:\Users\User\Desktop\data\synthetic samples\syn_points_1.png"
 df = pd.read_csv(csv_path)
 base_img = Image.open(img_path).convert('RGBA').resize((800, 800))  # Back to 800x800
-x, y = df['x_local'].values, df['y_local'].values
+x, y = df['x'].values, df['y'].values
 xy = np.vstack([x, y])
 
 w, h = base_img.size
-xx, yy = np.meshgrid(np.linspace(0, df['x_local'].max(), 100), np.linspace(0, df['y_local'].max(), 100))
+# xx, yy = np.meshgrid(np.linspace(0, df['x_local'].max(), 100), np.linspace(0, df['y_local'].max(), 100))
+xx, yy = np.meshgrid(np.linspace(0, df['x'].max(), 100), np.linspace(0, df['y'].max(), 100))
 positions = np.vstack([xx.ravel(), yy.ravel()])
 
 update_pending = None

@@ -271,7 +271,7 @@ class ClusterPointGenerator:
 
         # Export CSV
         csv_path = f"{base_path}.csv"
-        df = pd.DataFrame([{'x_local': p['x'], 'y_local': p['y']} for p in self.points])
+        df = pd.DataFrame([{'x': p['x'], 'y': p['y']} for p in self.points])
         df.to_csv(csv_path, index=False)
 
         messagebox.showinfo("Export Successful",
