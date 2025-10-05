@@ -3,8 +3,8 @@ from osgeo import gdal
 import tempfile
 import os
 
-tiff_path = r"C:\Users\User\Desktop\data\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
-output_tiff = r"C:\Users\User\Desktop\data\sample 2\level_2_with_overviews.tif"
+tiff_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
+output_tiff = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X_level_2_with_overviews.tif"
 
 # Load level 2 with tifffile
 with tifffile.TiffFile(tiff_path) as tif:

@@ -17,9 +17,11 @@ def estimate_kde(csv_path, output_base, bandwidth, reference_image_path):
     if reference_image_path.lower().endswith(('.tif', '.tiff')):
         with tifffile.TiffFile(reference_image_path) as tif:
             ref_height, ref_width = tif.pages[0].shape[:2]
+            ref_image = tif.pages[0].asarray()
     else:
         with Image.open(reference_image_path) as img:
             ref_width, ref_height = img.size
+            ref_image = np.array(img)
 
     print(f"Reference: {ref_width}x{ref_height}")
 
@@ -52,28 +54,43 @@ def estimate_kde(csv_path, output_base, bandwidth, reference_image_path):
     density_rgb = (plt.get_cmap('hot')(density_norm_img)[:, :, :3] * 255).astype(np.uint8)
     density_resized = Image.fromarray(density_rgb).resize((ref_width, ref_height), Image.BILINEAR)
 
-    # Save heatmap (TIFF with GDAL or JPEG for other formats)
+    # Create overlay (blend heatmap with reference image)
+    overlay = Image.blend(Image.fromarray(ref_image), density_resized, alpha=0.5)
+
+    # Save heatmap and overlay
     if reference_image_path.lower().endswith(('.tif', '.tiff')):
-        # Save as TIFF with JPEG compression using GDAL
+        # Save heatmap as TIFF
         heatmap_tiff = f'{output_base}_heatmap.tif'
         temp_tiff = tempfile.mktemp(suffix='.tif')
-
         tifffile.imwrite(temp_tiff, np.array(density_resized), photometric='rgb')
-
         gdal.Translate(heatmap_tiff, temp_tiff,
                        creationOptions=['COMPRESS=JPEG', 'JPEG_QUALITY=95', 'TILED=YES', 'PHOTOMETRIC=YCBCR'])
         os.remove(temp_tiff)
-
-        # Add overviews
         ds = gdal.Open(heatmap_tiff, gdal.GA_Update)
         ds.BuildOverviews('AVERAGE', [2, 4, 8, 16, 32])
         ds = None
         print(f"Saved: {heatmap_tiff}")
+
+        # Save overlay as TIFF
+        overlay_tiff = f'{output_base}_overlay.tif'
+        temp_tiff = tempfile.mktemp(suffix='.tif')
+        tifffile.imwrite(temp_tiff, np.array(overlay), photometric='rgb')
+        gdal.Translate(overlay_tiff, temp_tiff,
+                       creationOptions=['COMPRESS=JPEG', 'JPEG_QUALITY=95', 'TILED=YES', 'PHOTOMETRIC=YCBCR'])
+        os.remove(temp_tiff)
+        ds = gdal.Open(overlay_tiff, gdal.GA_Update)
+        ds.BuildOverviews('AVERAGE', [2, 4, 8, 16, 32])
+        ds = None
+        print(f"Saved: {overlay_tiff}")
     else:
-        # Save as JPEG for PNG/JPEG reference images
+        # Save as JPEG
         heatmap_jpeg = f'{output_base}_heatmap.jpg'
         density_resized.save(heatmap_jpeg, 'JPEG', quality=95)
         print(f"Saved: {heatmap_jpeg}")
+
+        overlay_jpeg = f'{output_base}_overlay.jpg'
+        overlay.save(overlay_jpeg, 'JPEG', quality=95)
+        print(f"Saved: {overlay_jpeg}")
 
     # Save plot
     plt.figure(figsize=(10, 10))
@@ -104,19 +121,10 @@ def main():
     ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X_level_2_with_overviews.tif"
     csv_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\2025-09-29_full_detections.csv"
 
-    ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\cropped_with_annotations.tif"
-    for bw in tqdm([0.001, 0.01, 0.05, 0.1, 0.2, 0.3]):
-        output = fr"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\kde\sample_2_kde_bw_{bw}"
+    for bw in tqdm([0.1, 0.2, 0.3]):
+        output = fr"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\kde_with_overlay\sample_2_kde_bw_{bw}"
         results = estimate_kde(csv_path, output, bw, ref_image)
         print(f"BW {bw}: Entropy={results['entropy']:.4f}, Gini={results['gini']:.4f}\n")
-        break
-
-    # csv_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\sync_points_2.csv"
-    # ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\sync_points_2.png"
-    # bw = 0.1
-    # output = fr'C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\kde\sync_points_2_kde_bw_{bw}'
-    # results = estimate_kde(csv_path, output, bw, ref_image)
-    #
 
 
 if __name__ == '__main__':
