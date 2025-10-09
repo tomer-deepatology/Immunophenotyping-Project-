@@ -64,14 +64,24 @@ def estimate_kde_krt(csv_path, annotations_path, output_base, bandwidth, referen
     krt_norm = (density_krt - density_krt.min()) / (density_krt.max() - density_krt.min())
     non_krt_norm = (density_non_krt - density_non_krt.min()) / (density_non_krt.max() - density_non_krt.min())
 
-    krt_img = Image.fromarray((plt.get_cmap('Reds')(krt_norm)[:, :, :3] * 255).astype(np.uint8))
-    non_krt_img = Image.fromarray((plt.get_cmap('Blues')(non_krt_norm)[:, :, :3] * 255).astype(np.uint8))
+
+    # Create heatmaps with black for zero values
+    krt_colored = plt.get_cmap('hot')(krt_norm)[:, :, :3]
+    krt_colored[krt_norm <= np.quantile(krt_norm, 0.01)] = [0, 0, 0]  # Set zero values to black
+    krt_img = Image.fromarray((krt_colored * 255).astype(np.uint8))
+
+    non_krt_colored = plt.get_cmap('gist_earth')(non_krt_norm)[:, :, :3]
+    non_krt_colored[non_krt_norm <= np.quantile(non_krt_norm, 0.01)] = [0, 0, 0]  # Set zero values to black
+    non_krt_img = Image.fromarray((non_krt_colored * 255).astype(np.uint8))
+
+    # Combine by adding (clamp to 255)
+    # combined_heatmap = Image.fromarray(np.clip(np.array(krt_img) + np.array(non_krt_img), 0, 255).astype(np.uint8))
     combined_heatmap = Image.blend(krt_img, non_krt_img, alpha=0.5)
 
     # Crop reference image and create overlays
     ref_cropped = Image.fromarray(ref_image[y_min:y_max, x_min:x_max])
-    krt_overlay = Image.blend(ref_cropped, krt_img, alpha=0.8)
-    non_krt_overlay = Image.blend(ref_cropped, non_krt_img, alpha=0.8)
+    krt_overlay = Image.blend(ref_cropped, krt_img, alpha=0.3)
+    non_krt_overlay = Image.blend(ref_cropped, non_krt_img, alpha=0.3)
     combined_overlay = Image.blend(ref_cropped, combined_heatmap, alpha=0.5)
 
     # Save all as TIFF
@@ -91,11 +101,11 @@ def estimate_kde_krt(csv_path, annotations_path, output_base, bandwidth, referen
 
 
 def main():
-    ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X_level_2_with_overviews.tif"
-    csv_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\2025-09-29_full_detections.csv"
-    annotations_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
+    ref_image = r"C:\Users\tomer\Desktop\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X_level_2_with_overviews.tif"
+    csv_path = r"C:\Users\tomer\Desktop\data\project 1\sample 2\2025-09-29_full_detections.csv"
+    annotations_path = r"C:\Users\tomer\Desktop\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
     bw = 0.05
-    output = fr"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\kde_krt_comparison\kde_bw_{bw}"
+    output = fr"C:\Users\tomer\Desktop\data\project 1\sample 2\kde_krt_comparison\kde_bw_{bw}"
     estimate_kde_krt(csv_path, annotations_path, output, bw, ref_image)
 
 

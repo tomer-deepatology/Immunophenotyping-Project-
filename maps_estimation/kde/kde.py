@@ -101,22 +101,18 @@ def estimate_kde(csv_path, output_base, bandwidth, reference_image_path):
 
 
 def main():
-    ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X_level_2_with_overviews.tif"
-    csv_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\2025-09-29_full_detections.csv"
-
-    ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\cropped_with_annotations.tif"
-    for bw in tqdm([0.001, 0.01, 0.05, 0.1, 0.2, 0.3]):
-        output = fr"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\sample 2\kde\sample_2_kde_bw_{bw}"
-        results = estimate_kde(csv_path, output, bw, ref_image)
-        print(f"BW {bw}: Entropy={results['entropy']:.4f}, Gini={results['gini']:.4f}\n")
-        break
-
-    # csv_path = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\sync_points_2.csv"
-    # ref_image = r"C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\sync_points_2.png"
-    # bw = 0.1
-    # output = fr'C:\Users\perez\Desktop\deepatplogy_very_temp\data\project 1\synthetics_data\kde\sync_points_2_kde_bw_{bw}'
-    # results = estimate_kde(csv_path, output, bw, ref_image)
-    #
+    base_path = r"C:\Users\tomer\Desktop\data\project 1\synthetics_data"
+    for i in range(7,8):
+        csv_path = f"{base_path}/sync_points_{i}.csv"
+        ref_image = f"{base_path}/sync_points_{i}.png"
+        # for bw in tqdm([0.05, 0.1, 0.2]):
+        for bw in tqdm([0.1]):
+            output_folder = fr"C:\Users\tomer\Desktop\data\project 1\synthetics_data\kde\sync_points_{i}"
+            os.makedirs(output_folder, exist_ok=True)
+            output_path = fr"{output_folder}\sync_points_{i}_bw_{bw}"
+            results = estimate_kde(csv_path, output_path, bw, ref_image)
+            print(f"BW {bw}: Entropy={results['entropy']:.4f}, Gini={results['gini']:.4f}\n")
+            break
 
 
 if __name__ == '__main__':

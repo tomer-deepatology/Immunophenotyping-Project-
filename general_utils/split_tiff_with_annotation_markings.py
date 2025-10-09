@@ -63,10 +63,10 @@ def split_and_mark_chunks(tiff_path, csv_path, output_path, chunk_size, level=2,
 
 
 def main():
-    tiff_path = r"C:\Users\User\Desktop\data\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
-    csv_path = r"C:\Users\User\Desktop\data\sample 2\2025-09-29_full_detections.csv"
+    tiff_path = r"C:\Users\tomer\Desktop\data\project 1\sample 2\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
+    csv_path = r"C:\Users\tomer\Desktop\data\project 1\sample 2\2025-09-29_full_detections.csv"
     chunk_size = 4096
-    output_folder = fr"C:\Users\User\Desktop\data\sample 2\output_chunks_with_annotations_{chunk_size}"
+    output_folder = fr"C:\Users\tomer\Desktop\data\project 1\sample 2\output_chunks_with_annotations_{chunk_size}"
 
     split_and_mark_chunks(
         tiff_path=tiff_path,
