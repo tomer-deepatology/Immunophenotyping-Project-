@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-annotations_path = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ008500_u673_1_40X_report\c6e89ee9-3ce1-4b69-b3a6-953e950fbec5\mask_file.hdf5"
+annotations_path = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014174_u673_1_40X-001\67635490-94aa-4cb1-9ee3-04e60d8ea432\mask_file.hdf5"
 
 # Automatically determine output path
 output_csv = Path(annotations_path).parent.parent / "detections_from_iris.csv"

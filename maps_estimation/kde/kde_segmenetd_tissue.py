@@ -190,57 +190,103 @@ def estimate_kde(csv_path, heatmap_tiff_path, plot_path, bandwidth, reference_ti
 
 
 def main():
-    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X"
-    # ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
-    # csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    # geojson_path = fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
-    #
-    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X_report"
-    # ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
-    # csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    # geojson_path = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif - Series 0.geojson"
+    # Define all samples
+    samples = [
+        {
+            'name': 'TRSPZ012209_u673_2',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X",
+            'tiff': "225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
+        },
+        {
+            'name': 'TRSPZ005647_u673_1',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X",
+            'tiff': "225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
+        },
+        {
+            'name': 'TRSPZ008500_u673_1',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ008500_u673_1_40X",
+            'tiff': "225_panCK CD8_TRSPZ008500_u673_1_40X.tif"
+        },
+        {
+            'name': 'TRSPZ012200_u673_2',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012200_u673_2_40X",
+            'tiff': "225_panCK CD8_TRSPZ012200_u673_2_40X.tif"
+        },
+        {
+            'name': 'TRSPZ012212_u673_2',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012212_u673_2_40X",
+            'tiff': "225_panCK CD8_TRSPZ012212_u673_2_40X.tif"
+        },
+        {
+            'name': 'TRSPZ015156_u673_1-005',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ015156_u673_1_40X-005",
+            'tiff': "225_panCK CD8_TRSPZ015156_u673_1_40X-005.tif"
+        },
+        {
+            'name': 'TRSPZ014171_u673_1',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014171_u673_1_40X",
+            'tiff': "225_panCK CD8_TRSPZ014171_u673_1_40X.tif"
+        },
+        {
+            'name': 'TRSPZ014460_u673_1-006',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014460_u673_1_40X-006",
+            'tiff': "225_panCK CD8_TRSPZ014460_u673_1_40X-006.tif"
+        },
+        {
+            'name': 'TRSPZ014459_u673_1',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014459_u673_1_40X",
+            'tiff': "225_panCK CD8_TRSPZ014459_u673_1_40X.tif"
+        },
+        {
+            'name': 'TRSPZ014174_u673_1-001',
+            'folder': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014174_u673_1_40X-001",
+            'tiff': "225_panCK CD8_TRSPZ014174_u673_1_40X-001.tif"
+        }
+    ]
 
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ008500_u673_1_40X_report"
-    ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif"
-    csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    geojson_path = fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif - Series 0.geojson"
+    bw = 0.001
 
-    bw = 0.05
+    # Process each sample
+    for i, sample in enumerate(samples, 1):
+        print("\n" + "=" * 80)
+        print(f"PROCESSING SAMPLE {i}/{len(samples)}: {sample['name']}")
+        print("=" * 80)
 
-    # Create output paths
-    heatmap_masked = fr"{folder_dir}\bw_{bw}_heatmap_segmented.tif"
-    heatmap_masked = None
-    plot_masked = fr"{folder_dir}\bw_{bw}_heatmap_plot_segmented.png"
+        folder_dir = sample['folder']
+        ref_tiff = os.path.join(folder_dir, sample['tiff'])
+        csv_path = os.path.join(folder_dir, "detections_from_iris.csv")
+        geojson_path = os.path.join(folder_dir, f"{sample['tiff']} - Series 0.geojson")
 
-    heatmap_unmasked = fr"{folder_dir}\bw_{bw}_heatmap.tif"
-    heatmap_unmasked = None
-    plot_unmasked = fr"{folder_dir}\bw_{bw}_heatmap_plot.png"
+        # Create output paths
+        heatmap_masked = os.path.join(folder_dir, f"bw_{bw}_heatmap_segmented.tif")
+        plot_masked = os.path.join(folder_dir, f"bw_{bw}_heatmap_plot_segmented.png")
+        heatmap_unmasked = os.path.join(folder_dir, f"bw_{bw}_heatmap.tif")
+        plot_unmasked = os.path.join(folder_dir, f"bw_{bw}_heatmap_plot.png")
 
-    # WITH tissue mask (recommended)
-    print("=" * 60)
-    print("CALCULATING WITH TISSUE MASK")
-    print("=" * 60)
-    results_masked = estimate_kde(csv_path, heatmap_masked, plot_masked, bw, ref_tiff,
-                                  geojson_path=geojson_path,
-                                  tile_level=2, grid_resolution=100, map_size=2000)
-    print(f"\nMasked Results: {results_masked}")
+        # Set to None if you don't want to save heatmap TIFFs
+        heatmap_masked = None
+        heatmap_unmasked = None
 
-    # Optionally compare with unmasked
-    print("\n" + "=" * 60)
-    print("CALCULATING WITHOUT TISSUE MASK (for comparison)")
-    print("=" * 60)
-    results_unmasked = estimate_kde(csv_path, heatmap_unmasked, plot_unmasked, bw, ref_tiff,
-                                    geojson_path=None,
-                                    tile_level=2, grid_resolution=100, map_size=2000)
-    print(f"\nUnmasked Results: {results_unmasked}")
+        try:
+            # WITH tissue mask
+            print("\n--- WITH TISSUE MASK ---")
+            results_masked = estimate_kde(csv_path, heatmap_masked, plot_masked, bw, ref_tiff,
+                                          geojson_path=geojson_path,
+                                          tile_level=2, grid_resolution=100, map_size=2000)
 
-    print("\n" + "=" * 60)
-    print("COMPARISON")
-    print("=" * 60)
-    print(f"Gini (Masked):   {results_masked['gini']:.4f}")
-    print(f"Gini (Unmasked): {results_unmasked['gini']:.4f}")
-    print(f"Difference:      {results_masked['gini'] - results_unmasked['gini']:.4f}")
+            # WITHOUT tissue mask
+            print("\n--- WITHOUT TISSUE MASK ---")
+            results_unmasked = estimate_kde(csv_path, heatmap_unmasked, plot_unmasked, bw, ref_tiff,
+                                            geojson_path=None,
+                                            tile_level=2, grid_resolution=100, map_size=2000)
 
+            print(f"\n--- RESULTS FOR {sample['name']} ---")
+            print(f"Gini (Masked):   {results_masked['gini']:.4f}")
+            print(f"Gini (Unmasked): {results_unmasked['gini']:.4f}")
+            print(f"Difference:      {results_masked['gini'] - results_unmasked['gini']:.4f}")
+
+        except Exception as e:
+            print(f"\nERROR processing {sample['name']}: {str(e)}")
 
 if __name__ == '__main__':
     main()
