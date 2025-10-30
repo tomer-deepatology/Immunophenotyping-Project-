@@ -7,6 +7,7 @@ from osgeo import gdal
 import tifffile
 import tempfile
 import os
+import openslide
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -26,6 +27,13 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
             page = tif.pages[tile_level]
             ref_height, ref_width = page.shape[:2]
             print(f"Reference tile {tile_level}: {ref_width}x{ref_height}")
+
+    elif file_ext == '.ndpi':
+        slide = openslide.OpenSlide(reference_image_path)
+        ref_width, ref_height = slide.level_dimensions[tile_level]
+        slide.close()
+        print(f"Reference tile {tile_level}: {ref_width}x{ref_height}")
+
     else:
         # Handle PNG, JPEG, and other formats with PIL
         img = Image.open(reference_image_path)
@@ -140,11 +148,18 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
 
 
 def main():
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
-    ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
-    csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    results = estimate_kde(csv_path, folder_dir, 0.02, ref_tiff,
-                           tile_level=2, grid_resolution=200, map_size=2000)
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
+    # ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
+    # csv_path = fr"{folder_dir}\detections_from_iris.csv"
+
+    folder_dir = r"C:\Users\tomer\Desktop\data\demo_sunday"
+    ref_tiff = fr"{folder_dir}\OS-2.ndpi"
+    csv_path = fr"{folder_dir}\report\2025-10-30_full_detections.csv"
+    # results = estimate_kde(csv_path, folder_dir, 0.02, ref_tiff,
+    #                        tile_level=0, grid_resolution=200, map_size=1984)
+
+    results = estimate_kde(csv_path, folder_dir, None, ref_tiff,
+                           tile_level=0, grid_resolution=200, map_size=1984)
     exit()
     bw_values = [0.02, 0.02]
     for bw in bw_values:

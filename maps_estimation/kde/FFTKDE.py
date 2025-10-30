@@ -9,6 +9,7 @@ import tifffile
 import tempfile
 import os
 from time import time
+import openslide
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -24,6 +25,10 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
         with tifffile.TiffFile(reference_image_path) as tif:
             page = tif.pages[tile_level]
             ref_height, ref_width = page.shape[:2]
+    elif file_ext == '.ndpi':
+        slide = openslide.OpenSlide(reference_image_path)
+        ref_width, ref_height = slide.level_dimensions[tile_level]
+        slide.close()
     else:
         img = Image.open(reference_image_path)
         ref_width, ref_height = img.size
@@ -130,21 +135,22 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
 
 
 def main():
-    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
-    # ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
-    # csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    #
-    # # Example: use original image dimensions for output
-    # results = estimate_kde(csv_path,
-    #                        folder_dir,
-    #                        0.002,
-    #                        ref_tiff,
-    #                        tile_level=2,
-    #                        grid_resolution=200,
-    #                        map_size=-1,  # Use -1 or any negative number for original dimensions
-    #                        save_heatmap=True,
-    #                        save_plot=False)
+    folder_dir = r"C:\Users\tomer\Desktop\data\demo_sunday"
+    ref_tiff = fr"{folder_dir}\OS-2.ndpi"
+    csv_path = fr"{folder_dir}\report\2025-10-30_full_detections.csv"
 
+    # Example: use original image dimensions for output
+    results = estimate_kde(csv_path,
+                           folder_dir,
+                           0.1,
+                           ref_tiff,
+                           tile_level=0,
+                           grid_resolution=100,
+                           map_size=1000,  # Use -1 or any negative number for original dimensions
+                           save_heatmap=True,
+                           save_plot=False)
+
+    exit()
     # for bw in [0.001, 0.0025, 0.005, 0.01, 0.02, 0.05, 0.1, 0.5]:
     for bw in [0.5]:
         folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X"
