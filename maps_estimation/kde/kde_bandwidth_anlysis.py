@@ -49,10 +49,17 @@ def calculate_gini_for_bandwidth(csv_path, bandwidth, reference_tiff_path, geojs
     Calculate only the Gini coefficient for a given bandwidth.
     No plotting or heatmap saving - just the Gini value.
     """
-    # Get dimensions from specific TIFF tile/page
-    with tifffile.TiffFile(reference_tiff_path) as tif:
-        page = tif.pages[tile_level]
-        ref_height, ref_width = page.shape[:2]
+    # Get dimensions from reference image
+    # Handle both TIFF and PNG files
+    if reference_tiff_path.lower().endswith('.tif') or reference_tiff_path.lower().endswith('.tiff'):
+        with tifffile.TiffFile(reference_tiff_path) as tif:
+            page = tif.pages[tile_level]
+            ref_height, ref_width = page.shape[:2]
+    else:
+        # For PNG or other image formats
+        img = Image.open(reference_tiff_path)
+        ref_width, ref_height = img.size
+        img.close()
 
     aspect_ratio = ref_width / ref_height
 
@@ -71,7 +78,7 @@ def calculate_gini_for_bandwidth(csv_path, bandwidth, reference_tiff_path, geojs
 
     # Create tissue mask if GeoJSON provided (at grid resolution)
     tissue_mask = None
-    if geojson_path:
+    if geojson_path is not None and os.path.exists(geojson_path):
         tissue_mask = create_tissue_mask_at_grid(geojson_path, grid_width, grid_height,
                                                  ref_width, ref_height)
 
@@ -110,10 +117,14 @@ def process_bandwidth_sweep(paths, bandwidth_range=None, tile_level=2, grid_reso
     folder_dir = paths['folder_dir']
     ref_tiff = paths['ref_tiff']
     csv_path = paths['csv_path']
-    geojson_path = paths['geojson_path']
+    geojson_path = paths.get('geojson_path')  # Use .get() for safer access
 
     print(f"\nProcessing: {os.path.basename(ref_tiff)}")
     print(f"Bandwidth range: {bandwidth_range[0]:.3f} to {bandwidth_range[-1]:.3f} ({len(bandwidth_range)} steps)")
+    if geojson_path:
+        print("Using tissue mask: Yes")
+    else:
+        print("Using tissue mask: No")
     print("=" * 80)
 
     # Arrays to store results
@@ -125,12 +136,13 @@ def process_bandwidth_sweep(paths, bandwidth_range=None, tile_level=2, grid_reso
     for i, bw in enumerate(bandwidth_range):
         print(f"Progress: {i + 1}/{len(bandwidth_range)} - BW={bw:.4f}", end='\r')
 
-        # Calculate masked Gini
-        gini_m = calculate_gini_for_bandwidth(csv_path, bw, ref_tiff,
-                                              geojson_path=geojson_path,
-                                              tile_level=tile_level,
-                                              grid_resolution=grid_resolution)
-        gini_masked.append(gini_m)
+        # Calculate masked Gini (only if geojson_path is provided)
+        if geojson_path:
+            gini_m = calculate_gini_for_bandwidth(csv_path, bw, ref_tiff,
+                                                  geojson_path=geojson_path,
+                                                  tile_level=tile_level,
+                                                  grid_resolution=grid_resolution)
+            gini_masked.append(gini_m)
 
         # Calculate unmasked Gini
         gini_u = calculate_gini_for_bandwidth(csv_path, bw, ref_tiff,
@@ -142,147 +154,176 @@ def process_bandwidth_sweep(paths, bandwidth_range=None, tile_level=2, grid_reso
     elapsed_time = time() - start_time
     print(f"\nCompleted in {elapsed_time:.2f}s ({elapsed_time / len(bandwidth_range):.2f}s per bandwidth)")
 
-    # Create plots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+    # Create plots - either 1 or 2 subplots depending on whether we have masked data
+    if geojson_path and gini_masked:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
-    # Plot 1: Masked Gini
-    ax1.plot(bandwidth_range, gini_masked, 'b-', linewidth=2)
-    ax1.set_xlabel('Bandwidth', fontsize=12)
-    ax1.set_ylabel('Gini Coefficient (Masked)', fontsize=12)
-    ax1.set_title(f'Gini vs Bandwidth - Tissue Segmented\n{os.path.basename(ref_tiff)}', fontsize=14)
-    ax1.grid(True, alpha=0.3)
-    ax1.set_xlim(bandwidth_range[0], bandwidth_range[-1])
-    ax1.set_ylim(0, 1)
-    # Add statistics text
-    textstr_masked = (f'Min Gini: {min(gini_masked):.4f} (BW={bandwidth_range[np.argmin(gini_masked)]:.4f})\n'
-                      f'Max Gini: {max(gini_masked):.4f} (BW={bandwidth_range[np.argmax(gini_masked)]:.4f})')
-    ax1.text(0.98, 0.02, textstr_masked, transform=ax1.transAxes, fontsize=10,
-             verticalalignment='bottom', horizontalalignment='right',
-             bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+        # Plot 1: Masked Gini
+        ax1.plot(bandwidth_range, gini_masked, 'b-', linewidth=2)
+        ax1.set_xlabel('Bandwidth', fontsize=12)
+        ax1.set_ylabel('Gini Coefficient (Masked)', fontsize=12)
+        ax1.set_title(f'Gini vs Bandwidth - Tissue Segmented\n{os.path.basename(ref_tiff)}', fontsize=14)
+        ax1.grid(True, alpha=0.3)
+        ax1.set_xlim(bandwidth_range[0], bandwidth_range[-1])
+        ax1.set_ylim(0, 1)
+        textstr_masked = (f'Min Gini: {min(gini_masked):.4f} (BW={bandwidth_range[np.argmin(gini_masked)]:.4f})\n'
+                          f'Max Gini: {max(gini_masked):.4f} (BW={bandwidth_range[np.argmax(gini_masked)]:.4f})')
+        ax1.text(0.98, 0.02, textstr_masked, transform=ax1.transAxes, fontsize=10,
+                 verticalalignment='bottom', horizontalalignment='right',
+                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
-    # Plot 2: Unmasked Gini
-    ax2.plot(bandwidth_range, gini_unmasked, 'r-', linewidth=2)
-    ax2.set_xlabel('Bandwidth', fontsize=12)
-    ax2.set_ylabel('Gini Coefficient (Unmasked)', fontsize=12)
-    ax2.set_title(f'Gini vs Bandwidth - Full Image\n{os.path.basename(ref_tiff)}', fontsize=14)
-    ax2.grid(True, alpha=0.3)
-    ax2.set_xlim(bandwidth_range[0], bandwidth_range[-1])
-    ax2.set_ylim(0, 1)
-    # Add statistics text
-    textstr_unmasked = (f'Min Gini: {min(gini_unmasked):.4f} (BW={bandwidth_range[np.argmin(gini_unmasked)]:.4f})\n'
-                        f'Max Gini: {max(gini_unmasked):.4f} (BW={bandwidth_range[np.argmax(gini_unmasked)]:.4f})')
-    ax2.text(0.98, 0.02, textstr_unmasked, transform=ax2.transAxes, fontsize=10,
-             verticalalignment='bottom', horizontalalignment='right',
-             bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+        # Plot 2: Unmasked Gini
+        ax2.plot(bandwidth_range, gini_unmasked, 'r-', linewidth=2)
+        ax2.set_xlabel('Bandwidth', fontsize=12)
+        ax2.set_ylabel('Gini Coefficient (Unmasked)', fontsize=12)
+        ax2.set_title(f'Gini vs Bandwidth - Full Image\n{os.path.basename(ref_tiff)}', fontsize=14)
+        ax2.grid(True, alpha=0.3)
+        ax2.set_xlim(bandwidth_range[0], bandwidth_range[-1])
+        ax2.set_ylim(0, 1)
+        textstr_unmasked = (f'Min Gini: {min(gini_unmasked):.4f} (BW={bandwidth_range[np.argmin(gini_unmasked)]:.4f})\n'
+                            f'Max Gini: {max(gini_unmasked):.4f} (BW={bandwidth_range[np.argmax(gini_unmasked)]:.4f})')
+        ax2.text(0.98, 0.02, textstr_unmasked, transform=ax2.transAxes, fontsize=10,
+                 verticalalignment='bottom', horizontalalignment='right',
+                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+    else:
+        # Only unmasked plot
+        fig, ax2 = plt.subplots(1, 1, figsize=(12, 5))
+        ax2.plot(bandwidth_range, gini_unmasked, 'r-', linewidth=2)
+        ax2.set_xlabel('Bandwidth', fontsize=12)
+        ax2.set_ylabel('Gini Coefficient', fontsize=12)
+        ax2.set_title(f'Gini vs Bandwidth - Full Image\n{os.path.basename(ref_tiff)}', fontsize=14)
+        ax2.grid(True, alpha=0.3)
+        ax2.set_xlim(bandwidth_range[0], bandwidth_range[-1])
+        ax2.set_ylim(0, 1)
+        textstr_unmasked = (f'Min Gini: {min(gini_unmasked):.4f} (BW={bandwidth_range[np.argmin(gini_unmasked)]:.4f})\n'
+                            f'Max Gini: {max(gini_unmasked):.4f} (BW={bandwidth_range[np.argmax(gini_unmasked)]:.4f})')
+        ax2.text(0.98, 0.02, textstr_unmasked, transform=ax2.transAxes, fontsize=10,
+                 verticalalignment='bottom', horizontalalignment='right',
+                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
     plt.tight_layout()
 
     # Save plot
-    output_plot_path = os.path.join(folder_dir, "gini_vs_bandwidth.png")
+    output_plot_path = os.path.join(folder_dir, "gini_vs_bandwidth_evaluations.png")
     plt.savefig(output_plot_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Saved plot: {output_plot_path}")
 
     # Save data to CSV
-    results_df = pd.DataFrame({
-        'bandwidth': bandwidth_range,
-        'gini_masked': gini_masked,
-        'gini_unmasked': gini_unmasked
-    })
-    output_csv_path = os.path.join(folder_dir, "gini_vs_bandwidth.csv")
+    if geojson_path and gini_masked:
+        results_df = pd.DataFrame({
+            'bandwidth': bandwidth_range,
+            'gini_masked': gini_masked,
+            'gini_unmasked': gini_unmasked
+        })
+    else:
+        results_df = pd.DataFrame({
+            'bandwidth': bandwidth_range,
+            'gini_unmasked': gini_unmasked
+        })
+
+    output_csv_path = os.path.join(folder_dir, "gini_vs_bandwidth_evaluations.csv")
     results_df.to_csv(output_csv_path, index=False)
     print(f"Saved data: {output_csv_path}")
 
     print("=" * 80)
     return results_df
 
-
 def main():
     # List of all images to process
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X"
-    images = [
-        {
-            'folder_dir': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X",
-            'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif",
-            'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-            'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
-        },
-    ]
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X"
+    # images = [
+    #     {
+    #         'folder_dir': r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X",
+    #         'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif",
+    #         'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #         'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
+    #     },
+    # ]
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ008500_u673_1_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012200_u673_2_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012200_u673_2_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012200_u673_2_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012212_u673_2_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012212_u673_2_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012212_u673_2_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ015156_u673_1_40X-005"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ015156_u673_1_40X-005.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ015156_u673_1_40X-005.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014171_u673_1_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014171_u673_1_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014171_u673_1_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014460_u673_1_40X-006"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014460_u673_1_40X-006.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014460_u673_1_40X-006.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014459_u673_1_40X"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014459_u673_1_40X.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014459_u673_1_40X.tif - Series 0.geojson"
+    # })
+    #
+    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014174_u673_1_40X-001"
+    # images.append({
+    #     'folder_dir': folder_dir,
+    #     'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014174_u673_1_40X-001.tif",
+    #     'csv_path': fr"{folder_dir}\detections_from_iris.csv",
+    #     'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014174_u673_1_40X-001.tif - Series 0.geojson"
+    # })
+    images = []
+    for i in range(3, 8):
+        folder_dir = rf"C:\Users\tomer\Desktop\data\project 1\synthetics_data\sync_points_{i}"
+        images.append({
+            'folder_dir': folder_dir,
+            'ref_tiff': fr"{folder_dir}\sync_points_{i}.png",
+            'csv_path': fr"{folder_dir}\sync_points_{i}.csv",
+            'geojson_path': None
 
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ008500_u673_1_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ008500_u673_1_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012200_u673_2_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012200_u673_2_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012200_u673_2_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012212_u673_2_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ012212_u673_2_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ012212_u673_2_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ015156_u673_1_40X-005"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ015156_u673_1_40X-005.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ015156_u673_1_40X-005.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014171_u673_1_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014171_u673_1_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014171_u673_1_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014460_u673_1_40X-006"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014460_u673_1_40X-006.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014460_u673_1_40X-006.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014459_u673_1_40X"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014459_u673_1_40X.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014459_u673_1_40X.tif - Series 0.geojson"
-    })
-
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ014174_u673_1_40X-001"
-    images.append({
-        'folder_dir': folder_dir,
-        'ref_tiff': fr"{folder_dir}\225_panCK CD8_TRSPZ014174_u673_1_40X-001.tif",
-        'csv_path': fr"{folder_dir}\detections_from_iris.csv",
-        'geojson_path': fr"{folder_dir}\225_panCK CD8_TRSPZ014174_u673_1_40X-001.tif - Series 0.geojson"
-    })
-
+        })
     # Define bandwidth range
-    bandwidth_range = np.linspace(0.001, 0.4, 20)
+    bandwidth_range = np.linspace(0.001, 0.4, 150)
 
     # Process each image
     for paths in images:

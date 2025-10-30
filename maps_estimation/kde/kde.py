@@ -13,16 +13,25 @@ Image.MAX_IMAGE_PIXELS = None
 from time import time
 
 
-def estimate_kde(csv_path, folder_dir, bandwidth, reference_tiff_path, tile_level=0, grid_resolution=100,
+def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_level=0, grid_resolution=100,
                  map_size=1000):
     init_time = time()
 
-    # Get dimensions from specific TIFF tile/page
-    with tifffile.TiffFile(reference_tiff_path) as tif:
-        print(f"Total pages in TIFF: {len(tif.pages)}")
-        page = tif.pages[tile_level]
-        ref_height, ref_width = page.shape[:2]
-        print(f"Reference tile {tile_level}: {ref_width}x{ref_height}")
+    file_ext = os.path.splitext(reference_image_path)[1].lower()
+
+    if file_ext in ['.tif', '.tiff']:
+        # Handle TIFF files with tifffile
+        with tifffile.TiffFile(reference_image_path) as tif:
+            print(f"Total pages in TIFF: {len(tif.pages)}")
+            page = tif.pages[tile_level]
+            ref_height, ref_width = page.shape[:2]
+            print(f"Reference tile {tile_level}: {ref_width}x{ref_height}")
+    else:
+        # Handle PNG, JPEG, and other formats with PIL
+        img = Image.open(reference_image_path)
+        ref_width, ref_height = img.size
+        img.close()
+        print(f"Image dimensions: {ref_width}x{ref_height}")
 
     aspect_ratio = ref_width / ref_height
     print(f"Aspect ratio: {aspect_ratio:.4f}")
@@ -131,15 +140,22 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_tiff_path, tile_leve
 
 
 def main():
-    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X"
-    ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
+    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
+    ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
     csv_path = fr"{folder_dir}\detections_from_iris.csv"
-    bw = 0.05
+    results = estimate_kde(csv_path, folder_dir, 0.02, ref_tiff,
+                           tile_level=2, grid_resolution=200, map_size=2000)
+    exit()
+    bw_values = [0.02, 0.02]
+    for bw in bw_values:
+        for i in range(3, 8):
+            folder_dir = rf"C:\Users\tomer\Desktop\data\project 1\synthetics_data\sync_points_{i}"
+            ref_tiff = fr"{folder_dir}\sync_points_{i}.png"
+            csv_path = fr"{folder_dir}\sync_points_{i}.csv"
+            # map_size controls the larger dimension (width or height depending on aspect ratio)
+            results = estimate_kde(csv_path, folder_dir, bw, ref_tiff,
+                                   tile_level=2, grid_resolution=2000, map_size=20000)
 
-    # map_size controls the larger dimension (width or height depending on aspect ratio)
-    results = estimate_kde(csv_path, folder_dir, bw, ref_tiff,
-                           tile_level=2, grid_resolution=100, map_size=2000)
-    print(f"\nResults: {results}")
 
 
 if __name__ == '__main__':

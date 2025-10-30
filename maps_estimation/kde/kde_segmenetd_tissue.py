@@ -244,7 +244,7 @@ def main():
         }
     ]
 
-    bw = 0.001
+    bw = 0.025
 
     # Process each sample
     for i, sample in enumerate(samples, 1):
@@ -264,8 +264,8 @@ def main():
         plot_unmasked = os.path.join(folder_dir, f"bw_{bw}_heatmap_plot.png")
 
         # Set to None if you don't want to save heatmap TIFFs
-        heatmap_masked = None
-        heatmap_unmasked = None
+        # heatmap_masked = None
+        # heatmap_unmasked = None
 
         try:
             # WITH tissue mask
