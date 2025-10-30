@@ -2,12 +2,17 @@ import openslide
 import tifffile
 import numpy as np
 from tqdm import tqdm
+from osgeo import gdal
+import tempfile
+import os
 
 # ===== PARAMETERS =====
 file_path = r"C:\Users\tomer\Desktop\data\demo_sunday\OS-2.ndpi"
 output_path = r"C:\Users\tomer\Desktop\data\demo_sunday\demo_best_resolution.tif"
 level = 0  # Which pyramid level (0 = highest resolution)
 tile_size = 4096  # Size of chunks to read at a time
+jpeg_quality = 90  # JPEG compression quality
+overview_levels = [2, 4, 8, 16, 32]  # Overview downsampling factors
 # ======================
 
 slide = openslide.OpenSlide(file_path)
@@ -22,12 +27,17 @@ n_tiles_y = int(np.ceil(height / tile_size))
 total_tiles = n_tiles_x * n_tiles_y
 print(f"Will process {n_tiles_x} x {n_tiles_y} = {total_tiles} tiles")
 
+# Create temporary uncompressed TIFF
+temp_tiff = tempfile.mktemp(suffix='.tif')
+print(f"Creating temporary file: {temp_tiff}")
+
 # Create output array in chunks using memmap (disk-backed array)
-output_array = np.memmap(output_path.replace('.tif', '_temp.dat'),
+output_array = np.memmap(temp_tiff.replace('.tif', '_temp.dat'),
                          dtype='uint8', mode='w+',
                          shape=(height, width, 3))
 
 # Read and write in tiles with progress bar
+print("Reading tiles from NDPI...")
 with tqdm(total=total_tiles, desc="Processing tiles") as pbar:
     for ty in range(n_tiles_y):
         for tx in range(n_tiles_x):
@@ -47,14 +57,36 @@ with tqdm(total=total_tiles, desc="Processing tiles") as pbar:
 
             pbar.update(1)
 
-print("Saving as TIFF...")
-tifffile.imwrite(output_path, output_array)
-
-# Clean up
-del output_array
-import os
-
-os.remove(output_path.replace('.tif', '_temp.dat'))
-
-print(f"Image saved to: {output_path}")
 slide.close()
+
+print("Saving as uncompressed TIFF...")
+tifffile.imwrite(temp_tiff, output_array, photometric='rgb')
+
+# Clean up memmap
+del output_array
+os.remove(temp_tiff.replace('.tif', '_temp.dat'))
+
+# Compress with GDAL
+print(f"Compressing with JPEG (quality={jpeg_quality})...")
+gdal.Translate(
+    output_path,
+    temp_tiff,
+    creationOptions=[
+        'COMPRESS=JPEG',
+        f'JPEG_QUALITY={jpeg_quality}',
+        'TILED=YES',
+        'PHOTOMETRIC=YCBCR'
+    ]
+)
+
+# Remove temporary file
+os.remove(temp_tiff)
+
+# Add overviews
+print(f"Building overviews: {overview_levels}...")
+ds = gdal.Open(output_path, gdal.GA_Update)
+ds.BuildOverviews('AVERAGE', overview_levels)
+ds = None
+
+print(f"Image saved with overviews to: {output_path}")
+print("Done!")

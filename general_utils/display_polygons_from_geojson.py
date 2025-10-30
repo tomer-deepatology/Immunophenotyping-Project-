@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib.patches import Polygon
 
 # Paths
-im_path = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X\225_panCK CD8_TRSPZ012209_u673_2_40X.tif"
+im_path = r"C:\Users\tomer\Desktop\data\demo_sunday\demo_best_resolution.tif"
 annotations_path = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X\225_panCK CD8_TRSPZ012209_u673_2_40X.tif - Series 0.geojson"
 output_tiff_path  =r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ012209_u673_2_40X\cropped_with_annotations.tif"
 
