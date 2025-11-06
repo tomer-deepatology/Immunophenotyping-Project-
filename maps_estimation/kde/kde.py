@@ -8,11 +8,27 @@ import tifffile
 import tempfile
 import os
 import openslide
-
+import h5py
+import json
 Image.MAX_IMAGE_PIXELS = None
 
 from time import time
 
+
+def extract_label2_coords(h5_path):
+    """Extract all coordinates for label 2 (CD8) from h5 file"""
+    coords = []
+    with h5py.File(h5_path, 'r') as f:
+        for key in f['wsi_cells'].keys():
+            if key.startswith('tile_'):
+                data = f['wsi_cells'][key][()]
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8')
+                geojson = json.loads(data)
+                for feature in geojson['features']:
+                    if feature['properties']['label'] == 2:
+                        coords.append(feature['geometry']['coordinates'])
+    return np.array(coords)
 
 def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_level=0, grid_resolution=100,
                  map_size=1000):
@@ -94,7 +110,7 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
     density_resized = Image.fromarray(density_rgb).resize((output_width, output_height), Image.BILINEAR)
 
     # Save heatmap as TIFF with JPEG compression
-    heatmap_tiff = rf'{folder_dir}\bw_{bandwidth}_heatmap.tif'
+    heatmap_tiff = rf'{folder_dir}\bw_{bandwidth}_heatmap_test.tif'
     temp_tiff = tempfile.mktemp(suffix='.tif')
 
     tifffile.imwrite(temp_tiff, np.array(density_resized), photometric='rgb')
@@ -136,7 +152,7 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
              verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
              family='monospace')
 
-    plot_path = rf'{folder_dir}\bw_{bandwidth}_heatmap_plot.png'
+    plot_path = rf'{folder_dir}\bw_{bandwidth}_heatmap_plot_test.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"Saved: {plot_path}")
@@ -148,17 +164,17 @@ def estimate_kde(csv_path, folder_dir, bandwidth, reference_image_path, tile_lev
 
 
 def main():
-    # folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
-    # ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
-    # csv_path = fr"{folder_dir}\detections_from_iris.csv"
+    folder_dir = r"C:\Users\tomer\Desktop\data\project 1\225_panCK CD8_TRSPZ005647_u673_1_40X"
+    ref_tiff = fr"{folder_dir}\225_panCK CD8_TRSPZ005647_u673_1_40X.tif"
+    csv_path = fr"{folder_dir}\cd8.hdf5"
 
-    folder_dir = r"C:\Users\tomer\Desktop\data\demo_sunday"
-    ref_tiff = fr"{folder_dir}\OS-2.ndpi"
-    csv_path = fr"{folder_dir}\report\2025-10-30_full_detections.csv"
+    # folder_dir = r"C:\Users\tomer\Desktop\data\demo_sunday"
+    # ref_tiff = fr"{folder_dir}\OS-2.ndpi"
+    # csv_path = fr"{folder_dir}\report\2025-10-30_full_detections.csv"
     # results = estimate_kde(csv_path, folder_dir, 0.02, ref_tiff,
     #                        tile_level=0, grid_resolution=200, map_size=1984)
 
-    results = estimate_kde(csv_path, folder_dir, None, ref_tiff,
+    results = estimate_kde(csv_path, folder_dir, 0.1, ref_tiff,
                            tile_level=0, grid_resolution=200, map_size=1984)
     exit()
     bw_values = [0.02, 0.02]
